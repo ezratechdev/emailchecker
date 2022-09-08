@@ -1,0 +1,9 @@
+{
+  "name": "emailchecker",
+  "version": "1.0.0",
+  "description": "This package enables you to validate and email and check whether it is a temorary email",
+  "main": "index.js",
+  "repository": "https://github.com/ezratechdev/emailchecker.git",
+  "author": "ezratechdev <254gtgt@gmail.com>",
+  "license": "MIT"
+}

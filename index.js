@@ -41,7 +41,8 @@ emailChecker.prototype.syntax = function(){
             error:true,
             email:this.email,
             message:`${this.email} has an invalid syntax`,
-        }}
+        }
+    }
     }
     return {
         ...
@@ -59,13 +60,12 @@ emailChecker.prototype.domain = function(){
         return this.syntax(this.email);
     }
     let data = {
-        name:'ez'
-    }
+        error:undefined,
+    };
     const domain = this.email.split('@')[1];
     dns.resolve(domain , 'MX' , function(error , address){
         if(error){
-            data.name = 'error'
-            return{
+            data = {
                 error:true,
                 email:this.email,
                 message:`Could not check the mx records of the domain hosting the email`,
@@ -73,22 +73,20 @@ emailChecker.prototype.domain = function(){
             }
         }
         if(address.length > 0){
-            data.name = 'kip';
-            return {
+            data = {
                 error: false,
                 email: this.email,
                 message: `The domain of this email checks out`,
                 address,
             }
         }
-        console.log(data.name , 'nam e');
+        return data;
     })
 }
 
 // download function
 emailChecker.prototype.download = function(link){
     if(!link){
-        console.log('No link')
         return {
             error:true,
             message:`Download link was not passed`,
@@ -97,7 +95,6 @@ emailChecker.prototype.download = function(link){
     const stream = fs.createWriteStream(`${__dirname}/data.json`);
     https.get(link , function(response){
         if(response.statusCode !== 200){
-            console.log('No 200 status code' , response.statusCode)
             return {
                 error:true,
                 message:`Unable to download`,
@@ -118,11 +115,29 @@ emailChecker.prototype.download = function(link){
 }
 
 emailChecker.prototype.temp = function(){
+    // if(this.domain().error){
+    //     return this.domain()
+    // }
     const domain = this.email.split('@')[1],
     domains = JSON.parse(fs.readFileSync(`${__dirname}/data.json`))
     temp_check = domains.indexOf(domain)
     ;
-    console.log(temp_check , domain , this.email)
+    if(temp_check == -1){
+        return {
+            email:this.email,
+            message:`Is a temp mail`,
+            temp:true,
+            error:true,
+        }
+    }else{
+        // valida email
+        return {
+            email:this.email,
+            message:`Not a temp mail`,
+            temp:false,
+            error:false,
+        }
+    }
 }
 
 // emailChecker.__

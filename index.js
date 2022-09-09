@@ -55,32 +55,45 @@ emailChecker.prototype.syntax = function(){
 }
 
 // check domain
-emailChecker.prototype.domain = function(){
+emailChecker.prototype.domainCheck = function(){
     if(this.syntax(this.email).error){
         return this.syntax(this.email);
-    }
-    let data = {
-        error:undefined,
     };
     const domain = this.email.split('@')[1];
-    dns.resolve(domain , 'MX' , function(error , address){
-        if(error){
-            data = {
-                error:true,
-                email:this.email,
-                message:`Could not check the mx records of the domain hosting the email`,
-                address:[],
+    return new Promise((resolve , reject) =>{
+        dns.resolve(domain , 'MX' , function(error , address){
+            if(error){
+                reject(
+                    {
+                        error:true,
+                        email:this.email,
+                        message:`Could not check the mx records of the domain hosting the email`,
+                        address:[],
+                    }
+                );
             }
-        }
-        if(address.length > 0){
-            data = {
-                error: false,
-                email: this.email,
-                message: `The domain of this email checks out`,
-                address,
+            if(address.length > 0){
+                resolve(
+                    {
+                        error: false,
+                        email: this.email,
+                        message: `The domain of this email checks out`,
+                        address,
+                    }
+
+                );
             }
-        }
-        return data;
+        });
+    })
+}
+
+emailChecker.prototype.domain = async function(){
+    await this.domainCheck()
+    .then((data) =>{
+        console.log(data);
+    })
+    .catch((error) =>{
+        console.log(error)
     })
 }
 
@@ -114,30 +127,34 @@ emailChecker.prototype.download = function(link){
     })
 }
 
-emailChecker.prototype.temp = function(){
-    // if(this.domain().error){
-    //     return this.domain()
-    // }
-    const domain = this.email.split('@')[1],
-    domains = JSON.parse(fs.readFileSync(`${__dirname}/data.json`))
-    temp_check = domains.indexOf(domain)
-    ;
-    if(temp_check == -1){
-        return {
-            email:this.email,
-            message:`Is a temp mail`,
-            temp:true,
-            error:true,
+emailChecker.prototype.temp = async function(){
+    return await this.domainCheck()
+    .then(() =>{
+        // console.log(data);
+        const domain = this.email.split('@')[1],
+        domains = JSON.parse(fs.readFileSync(`${__dirname}/data.json`))
+        temp_check = domains.indexOf(domain)
+        ;
+        if(temp_check == -1){
+            return {
+                email:this.email,
+                message:`Is a temp mail`,
+                temp:true,
+                error:true,
+            }
+        }else{
+            // valid email
+            return {
+                email:this.email,
+                message:`Not a temp mail`,
+                temp:false,
+                error:false,
+            }
         }
-    }else{
-        // valida email
-        return {
-            email:this.email,
-            message:`Not a temp mail`,
-            temp:false,
-            error:false,
-        }
-    }
+    })
+    .catch((error) =>{
+        return error;
+    })
 }
 
 // emailChecker.__

@@ -9,7 +9,7 @@ settings = {
     download_url:'https://disposable.github.io/disposable-email-domains/domains_mx.json',
 }
 ;
-function emailChecker(email){
+function EmailChecker(email){
     this.email = email;
     // check settings and files
     if(!fs.existsSync('settings.json')){
@@ -33,40 +33,41 @@ function emailChecker(email){
 }
 
 // check synat
-emailChecker.prototype.syntax = function(){
+EmailChecker.prototype.syntax = function(){
     // check syntax of email
-    if(!(this.email.includes('@') && this.email.includes('.') && this.email.length > 3)){
-        return {
-            ...{
-            error:true,
-            email:this.email,
-            message:`${this.email} has an invalid syntax`,
+    // for uniformity
+    const email = this.email;
+    return new Promise((resolve , reject ) =>{
+        if((email.includes('@') && email.includes('.') && email.length > 3)){
+            resolve({
+                    error:true,
+                    email,
+                    message:`${this.email} has an invalid syntax`,
+            })
+        }else{
+            reject({
+                error:false,
+                email,
+                message:`${this.email} has a valid syntax`,
+            })
         }
-    }
-    }
-    return {
-        ...
-        {
-            error:false,
-            email:this.email,
-            message:`${this.email} has a valid syntax`,
-        }
-    }
+    })
 }
 
 // check domain
-emailChecker.prototype.domainCheck = function(){
+EmailChecker.prototype.domain = function(){
     if(this.syntax(this.email).error){
         return this.syntax(this.email);
     };
-    const domain = this.email.split('@')[1];
+    const email = this.email;
+    const domain = email.split('@')[1];
     return new Promise((resolve , reject) =>{
         dns.resolve(domain , 'MX' , function(error , address){
             if(error){
                 reject(
                     {
                         error:true,
-                        email:this.email,
+                        email,
                         message:`Could not check the mx records of the domain hosting the email`,
                         address:[],
                     }
@@ -76,29 +77,18 @@ emailChecker.prototype.domainCheck = function(){
                 resolve(
                     {
                         error: false,
-                        email: this.email,
+                        email,
                         message: `The domain of this email checks out`,
                         address,
                     }
-
                 );
             }
         });
     })
 }
 
-emailChecker.prototype.domain = async function(){
-    await this.domainCheck()
-    .then((data) =>{
-        console.log(data);
-    })
-    .catch((error) =>{
-        console.log(error)
-    })
-}
-
 // download function
-emailChecker.prototype.download = function(link){
+EmailChecker.prototype.download = function(link){
     if(!link){
         return {
             error:true,
@@ -127,7 +117,7 @@ emailChecker.prototype.download = function(link){
     })
 }
 
-emailChecker.prototype.temp = async function(){
+EmailChecker.prototype.temp = async function(){
     return await this.domainCheck()
     .then(() =>{
         // console.log(data);
@@ -157,7 +147,15 @@ emailChecker.prototype.temp = async function(){
     })
 }
 
-// emailChecker.__
-console.log(new emailChecker('email@data.com').temp());
+// EmailChecker.__
+// new EmailChecker(`email@data.com`).syntax()
+// .then(data =>{
+//     console.log(`Success`);
+//     console.log(data)
+// })
+// .catch(error =>{
+//     console.log(`Error`)
+//     console.log(error)
+// })
 
 

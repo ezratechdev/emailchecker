@@ -1,7 +1,7 @@
 
 # Email Validator js
 
-This package enables you to validate an email and check whether it is a temorary email
+This package enables you to validate an email and check if it is a temorary email
 # Installation
 
 

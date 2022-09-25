@@ -81,3 +81,10 @@ new EmailValidator("example@gmail.com")
     // handle error
 })
 ```
+
+## Contributing
+Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
+This is package is still work in progress
+
+## License
+[MIT](https://choosealicense.com/licenses/mit/)

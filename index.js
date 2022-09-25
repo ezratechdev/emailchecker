@@ -31,20 +31,22 @@ class EmailChecker {
             }
         }
     }
-    // check synat
+    // check syntax
     syntax() {
-        // check syntax of email
-        // for uniformity
+        /**
+         * check syntax of email
+         * for uniformity made it promise based
+         */
         const email = this.email;
-        return new Promise((resolve, reject) => {
-            if ((email.includes('@') && email.includes('.') && email.length > 3)) {
+        return new Promise((resolve, _) => {
+            if (!(email.includes('@') && email.includes('.') && email.length > 3)) {
                 resolve({
                     error: true,
                     email,
                     message: `${this.email} has an invalid syntax`,
                 });
             } else {
-                reject({
+                resolve({
                     error: false,
                     email,
                     message: `${this.email} has a valid syntax`,
@@ -59,10 +61,20 @@ class EmailChecker {
         };
         const email = this.email;
         const domain = email.split('@')[1];
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve, _) => {
             dns.resolve(domain, 'MX', function (error, address) {
                 if (error) {
-                    reject(
+                    return resolve(
+                        {
+                            error: true,
+                            email,
+                            message: `Could not check the mx records of the domain hosting the email`,
+                            address: [],
+                        }
+                    );
+                }
+                if(!address){
+                    return resolve(
                         {
                             error: true,
                             email,
@@ -72,7 +84,7 @@ class EmailChecker {
                     );
                 }
                 if (address.length > 0) {
-                    resolve(
+                    return resolve(
                         {
                             error: false,
                             email,
@@ -86,23 +98,42 @@ class EmailChecker {
     }
     // download function
     download(link) {
-        if (!link) {
+        if(!link){
+            console.log('No link')
             return {
-                error: true,
-                message: `Download link was not passed`,
-            };
-            // >>>>>>> a17df00da41ab1c630d15f3fcba59023ccd54954
+                error:true,
+                message:`Download link was not passed`,
+            }
         }
+        const stream = fs.createWriteStream(`${__dirname}/data.json`);
+        https.get(link , function(response){
+            if(response.statusCode !== 200){
+                console.log('No 200 status code' , response.statusCode)
+                return {
+                    error:true,
+                    message:`Unable to download`,
+                }
+            }
+            response.pipe(stream)
+            stream.on('error' , () =>{
+                fs.unlinkSync(`${__dirname}/data.json`);
+                return {
+                    error:true,
+                    message:`Error parsing data to file`,
+                }
+            })
+            stream.on('finish' , function(){
+                stream.close();
+            });
+        })
     }
-    // <<<<<<< HEAD
-    // =======
     async temp() {
-        return await this.domainCheck()
+        return await this.domain()
             .then(() => {
-                // console.log(data);
-                const domain = this.email.split('@')[1], domains = JSON.parse(fs.readFileSync(`${__dirname}/data.json`));
+                const domain = this.email.split('@')[1], domains = JSON.parse(fs.readFileSync(`${__dirname}/data.json`)),
                 temp_check = domains.indexOf(domain);
-                if (temp_check == -1) {
+                console.log(temp_check)
+                if (!(temp_check == -1)) {
                     return {
                         email: this.email,
                         message: `Is a temp mail`,
@@ -125,18 +156,4 @@ class EmailChecker {
     }
 }
 
-
-
-
-
-
-
-new EmailChecker(`ezrame254@gmail.com`).domain()
-.then(data =>{
-    console.log(data)
-})
-.catch(error =>{
-    console.log(error)
-})
-
-// module.exports = EmailChecker;
+module.exports = EmailChecker;

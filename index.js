@@ -9,7 +9,7 @@ settings = {
     download_url:'https://disposable.github.io/disposable-email-domains/domains_mx.json',
 }
 ;
-class EmailChecker {
+class EmailValidator {
     constructor(email) {
         this.email = email;
         // check settings and files
@@ -156,4 +156,4 @@ class EmailChecker {
     }
 }
 
-module.exports = EmailChecker;
+module.exports = EmailValidator;

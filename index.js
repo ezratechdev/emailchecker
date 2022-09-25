@@ -9,155 +9,148 @@ settings = {
     download_url:'https://disposable.github.io/disposable-email-domains/domains_mx.json',
 }
 ;
-function emailChecker(email){
-    this.email = email;
-    // check settings and files
-    if(!fs.existsSync('settings.json')){
-        // download file
-        this.download(settings.download_url);
-        fs.writeFileSync('settings.json' , JSON.stringify(settings));
-    } else{
-        // 
-        const settings = JSON.parse(fs.readFileSync(`${path.join(__dirname,'/settings.json')}`))
-        const {
-            previous_data,
-            time,
-        } = settings;
-        if((Date.now() > parseInt(previous_data + time))){
-            // download
+class EmailChecker {
+    constructor(email) {
+        this.email = email;
+        // check settings and files
+        if (!fs.existsSync('settings.json')) {
+            // download file
             this.download(settings.download_url);
-            fs.unlinkSync(`${__dirname}/settings.json`)
-            fs.writeFileSync('settings.json' , JSON.stringify(settings));
-        }
-    }
-}
-
-// check synat
-emailChecker.prototype.syntax = function(){
-    // check syntax of email
-    if(!(this.email.includes('@') && this.email.includes('.') && this.email.length > 3)){
-        return {
-            ...{
-            error:true,
-            email:this.email,
-            message:`${this.email} has an invalid syntax`,
-        }
-    }
-    }
-    return {
-        ...
-        {
-            error:false,
-            email:this.email,
-            message:`${this.email} has a valid syntax`,
-        }
-    }
-}
-
-// check domain
-emailChecker.prototype.domainCheck = function(){
-    if(this.syntax(this.email).error){
-        return this.syntax(this.email);
-    };
-    const domain = this.email.split('@')[1];
-    return new Promise((resolve , reject) =>{
-        dns.resolve(domain , 'MX' , function(error , address){
-            if(error){
-                reject(
-                    {
-                        error:true,
-                        email:this.email,
-                        message:`Could not check the mx records of the domain hosting the email`,
-                        address:[],
-                    }
-                );
+            fs.writeFileSync('settings.json', JSON.stringify(settings));
+        } else {
+            // 
+            const settings = JSON.parse(fs.readFileSync(`${path.join(__dirname, '/settings.json')}`));
+            const {
+                previous_data, time,
+            } = settings;
+            if ((Date.now() > parseInt(previous_data + time))) {
+                // download
+                this.download(settings.download_url);
+                fs.unlinkSync(`${__dirname}/settings.json`);
+                fs.writeFileSync('settings.json', JSON.stringify(settings));
             }
-            if(address.length > 0){
-                resolve(
-                    {
-                        error: false,
+        }
+    }
+    // check synat
+    syntax() {
+        // check syntax of email
+        // for uniformity
+        const email = this.email;
+        return new Promise((resolve, reject) => {
+            if (!(email.includes('@') && email.includes('.') && email.length > 3)) {
+                resolve({
+                    error: true,
+                    email,
+                    message: `${this.email} has an invalid syntax`,
+                });
+            } else {
+                reject({
+                    error: false,
+                    email,
+                    message: `${this.email} has a valid syntax`,
+                });
+            }
+        });
+    }
+    // check domain
+    domain() {
+        console.log(`Here`);
+        if (this.syntax(this.email).error) {
+            return this.syntax(this.email);
+        };
+        const email = this.email;
+        const domain = email.split('@')[1];
+        return new Promise((resolve, reject) => {
+            dns.resolve(domain , 'MX' , function(error , address){
+                if(error){
+                    reject(
+                        {
+                            error:true,
+                            email,
+                            message:`Could not check the mx records of the domain hosting the email`,
+                            address:[],
+                        }
+                    );
+                }
+                if(address.length > 0){
+                    resolve(
+                        {
+                            error: false,
+                            email,
+                            message: `The domain of this email checks out`,
+                            address,
+                        }
+                    );
+                }
+            });
+        });
+    }
+    // download function
+    download(link) {
+        if (!link) {
+            return {
+                error: true,
+                message: `Download link was not passed`,
+            };
+        }
+        const stream = fs.createWriteStream(`${__dirname}/data.json`);
+        https.get(link, function (response) {
+            if (response.statusCode !== 200) {
+                return {
+                    error: true,
+                    message: `Unable to download`,
+                };
+            }
+            response.pipe(stream);
+            stream.on('error', () => {
+                fs.unlinkSync(`${__dirname}/data.json`);
+                return {
+                    error: true,
+                    message: `Error parsing data to file`,
+                };
+            });
+            stream.on('finish', function () {
+                stream.close();
+            });
+        });
+    }
+    async temp() {
+        return await this.domain()
+            .then(() => {
+                const domain = this.email.split('@')[1], domains = JSON.parse(fs.readFileSync(`${__dirname}/data.json`));
+                temp_check = domains.indexOf(domain);
+                if (temp_check == -1) {
+                    return {
                         email: this.email,
-                        message: `The domain of this email checks out`,
-                        address,
-                    }
-
-                );
-            }
-        });
-    })
-}
-
-emailChecker.prototype.domain = async function(){
-    await this.domainCheck()
-    .then((data) =>{
-        console.log(data);
-    })
-    .catch((error) =>{
-        console.log(error)
-    })
-}
-
-// download function
-emailChecker.prototype.download = function(link){
-    if(!link){
-        return {
-            error:true,
-            message:`Download link was not passed`,
-        }
+                        message: `Is a temp mail`,
+                        temp: true,
+                        error: true,
+                    };
+                } else {
+                    // valid email
+                    return {
+                        email: this.email,
+                        message: `Not a temp mail`,
+                        temp: false,
+                        error: false,
+                    };
+                }
+            })
+            .catch((error) => {
+                return error;
+            });
     }
-    const stream = fs.createWriteStream(`${__dirname}/data.json`);
-    https.get(link , function(response){
-        if(response.statusCode !== 200){
-            return {
-                error:true,
-                message:`Unable to download`,
-            }
-        }
-        response.pipe(stream)
-        stream.on('error' , () =>{
-            fs.unlinkSync(`${__dirname}/data.json`);
-            return {
-                error:true,
-                message:`Error parsing data to file`,
-            }
-        })
-        stream.on('finish' , function(){
-            stream.close();
-        });
-    })
 }
 
-emailChecker.prototype.temp = async function(){
-    return await this.domainCheck()
-    .then(() =>{
-        // console.log(data);
-        const domain = this.email.split('@')[1],
-        domains = JSON.parse(fs.readFileSync(`${__dirname}/data.json`))
-        temp_check = domains.indexOf(domain)
-        ;
-        if(temp_check == -1){
-            return {
-                email:this.email,
-                message:`Is a temp mail`,
-                temp:true,
-                error:true,
-            }
-        }else{
-            // valid email
-            return {
-                email:this.email,
-                message:`Not a temp mail`,
-                temp:false,
-                error:false,
-            }
-        }
-    })
-    .catch((error) =>{
-        return error;
-    })
-}
-
-// emailChecker.__
-console.log(new emailChecker('email@data.com').temp());
 
 
+
+new EmailChecker(`ezrame254@gmail.com`).domain()
+.then(data =>{
+    console.log(data)
+})
+.catch(error =>{
+    console.log(error)
+})
+
+// module.exports = EmailChecker;
